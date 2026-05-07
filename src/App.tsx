@@ -23,7 +23,7 @@ function SplashScreen() {
             <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
           </svg>
         </div>
-        <p className="text-sm text-gray-400 font-medium">WhisperBox</p>
+        <p className="text-sm text-gray-400 font-medium">Tunchi Whisper</p>
         <div className="w-5 h-5 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
       </div>
     </div>

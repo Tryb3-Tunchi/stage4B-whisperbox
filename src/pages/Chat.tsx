@@ -8,10 +8,10 @@ import {
 } from '../api/client'
 import { encryptMessage, decryptMessage } from '../crypto/messages'
 import { useNavigate } from 'react-router-dom'
-import ConversationList from '../components/ConversationList'
 import MessageThread from '../components/MessageThread'
 import SearchUsers from '../components/SearchUsers'
-import { ShieldIcon, LogoutIcon, PlusIcon } from '../components/Icons'
+import SettingsModal from '../components/SettingsModal'
+import { PlusIcon, SettingsIcon } from '../components/Icons'
 
 export interface DecryptedMessage {
   id: string
@@ -33,7 +33,7 @@ export default function ChatPage() {
   const [sending, setSending] = useState(false)
   const [loadingMessages, setLoadingMessages] = useState(false)
   const [showSearch, setShowSearch] = useState(false)
-  const [isMobileThreadOpen, setIsMobileThreadOpen] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
 
   // ── Load conversations ──────────────────────────────
   const loadConversations = useCallback(async () => {
@@ -77,7 +77,6 @@ export default function ChatPage() {
   async function selectConversation(conv: Conversation) {
     setActiveUserId(conv.user_id)
     setActiveUser({ id: conv.user_id, display_name: conv.display_name, username: conv.username })
-    setIsMobileThreadOpen(true)
     await loadMessages(conv.user_id)
   }
 
@@ -100,7 +99,6 @@ export default function ChatPage() {
     setActiveUserId(searchUser.id)
     setActiveUser(searchUser)
     setMessages([])
-    setIsMobileThreadOpen(true)
   }
 
   // ── Send message ────────────────────────────────────
@@ -153,70 +151,9 @@ export default function ChatPage() {
   if (!user) return null
 
   return (
-    <div className="h-full flex bg-gray-100">
-
-      {/* ── Sidebar ─────────────────────────────────── */}
-      <aside className={`
-        flex flex-col bg-white border-r border-gray-200
-        w-full md:w-80 lg:w-96 flex-shrink-0
-        ${isMobileThreadOpen ? 'hidden md:flex' : 'flex'}
-      `}>
-
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 bg-sky-500">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
-              </svg>
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-white leading-none">{user.display_name}</p>
-              <p className="text-xs text-sky-100">@{user.username}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setShowSearch(true)}
-              className="p-2 rounded-full hover:bg-white/20 text-white transition-colors"
-              aria-label="New conversation"
-              title="New conversation"
-            >
-              <PlusIcon />
-            </button>
-            <button
-              onClick={handleLogout}
-              className="p-2 rounded-full hover:bg-white/20 text-white transition-colors"
-              aria-label="Log out"
-              title="Log out"
-            >
-              <LogoutIcon />
-            </button>
-          </div>
-        </div>
-
-        {/* E2EE indicator */}
-        <div className="flex items-center gap-1.5 px-4 py-2 bg-emerald-50 border-b border-emerald-100">
-          <ShieldIcon className="w-3.5 h-3.5 text-emerald-600" />
-          <p className="text-xs text-emerald-700 font-medium">End-to-end encrypted</p>
-        </div>
-
-        {/* Conversations */}
-        <div className="flex-1 overflow-y-auto scrollbar-thin">
-          <ConversationList
-            conversations={conversations}
-            activeUserId={activeUserId}
-            currentUserId={user.id}
-            onSelect={selectConversation}
-          />
-        </div>
-      </aside>
-
-      {/* ── Message thread ───────────────────────────── */}
-      <main className={`
-        flex-1 flex flex-col
-        ${!isMobileThreadOpen ? 'hidden md:flex' : 'flex'}
-      `}>
+    <div className="h-full flex flex-col bg-gray-900">
+      {/* Message Thread - Full Width */}
+      <div className="flex-1 overflow-hidden">
         {activeUser ? (
           <MessageThread
             currentUserId={user.id}
@@ -225,18 +162,82 @@ export default function ChatPage() {
             loading={loadingMessages}
             sending={sending}
             onSend={sendMessage}
-            onBack={() => { setIsMobileThreadOpen(false); setActiveUserId(null) }}
+            onBack={() => setActiveUserId(null)}
           />
         ) : (
           <EmptyState onNew={() => setShowSearch(true)} />
         )}
-      </main>
+      </div>
 
-      {/* ── Search modal ─────────────────────────────── */}
+      {/* Bottom Navigation - Snapchat Style */}
+      <div className="border-t border-gray-800 bg-gray-900/95 backdrop-blur-sm">
+        {/* Conversations List - Horizontal Scroll */}
+        <div className="px-2 py-3 border-b border-gray-800 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-2 pb-1">
+            {conversations.length === 0 ? (
+              <p className="text-xs text-gray-500 px-3 py-2">No conversations yet</p>
+            ) : (
+              conversations.map(conv => (
+                <button
+                  key={conv.user_id}
+                  onClick={() => {
+                    setActiveUserId(conv.user_id)
+                    setActiveUser({ id: conv.user_id, display_name: conv.display_name, username: conv.username })
+                    loadMessages(conv.user_id)
+                  }}
+                  className={`
+                    flex-shrink-0 px-4 py-2 rounded-full font-semibold text-sm transition-all whitespace-nowrap
+                    ${activeUserId === conv.user_id
+                      ? 'bg-gradient-to-r from-purple-500 to-cyan-500 text-white shadow-lg'
+                      : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                    }
+                  `}
+                >
+                  {conv.display_name}
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex items-center justify-between px-4 py-3 gap-2">
+          {/* Search Button */}
+          <button
+            onClick={() => setShowSearch(true)}
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition-all font-semibold text-sm"
+            aria-label="Search users"
+          >
+            <PlusIcon className="w-5 h-5" />
+            New Chat
+          </button>
+
+          {/* Profile/Settings Button */}
+          <button
+            onClick={() => setShowSettings(true)}
+            className="flex-shrink-0 w-11 h-11 flex items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-cyan-500 hover:from-purple-600 hover:to-cyan-600 text-white transition-all shadow-lg"
+            aria-label="Settings"
+            title="Settings & Profile"
+          >
+            <SettingsIcon className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Search Modal */}
       {showSearch && (
         <SearchUsers
           onSelect={startConversation}
           onClose={() => setShowSearch(false)}
+        />
+      )}
+
+      {/* Settings Modal */}
+      {showSettings && user && (
+        <SettingsModal
+          user={user}
+          onLogout={handleLogout}
+          onClose={() => setShowSettings(false)}
         />
       )}
     </div>
@@ -245,19 +246,19 @@ export default function ChatPage() {
 
 function EmptyState({ onNew }: { onNew: () => void }) {
   return (
-    <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-gray-50">
-      <div className="w-20 h-20 rounded-3xl bg-sky-100 flex items-center justify-center mb-5">
-        <svg className="w-10 h-10 text-sky-500" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+    <div className="flex-1 flex flex-col items-center justify-center text-center p-8 bg-gray-900">
+      <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-purple-500/20 to-cyan-500/20 border border-purple-500/30 flex items-center justify-center mb-6">
+        <svg className="w-12 h-12 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
         </svg>
       </div>
-      <h2 className="text-xl font-semibold text-gray-800 mb-2">Your messages are private</h2>
-      <p className="text-sm text-gray-500 max-w-xs leading-relaxed mb-6">
-        Messages are end-to-end encrypted. Only you and the person you're messaging can read them.
+      <h2 className="text-2xl font-bold text-white mb-2">Welcome to Tunchi Whisper</h2>
+      <p className="text-sm text-gray-400 max-w-xs leading-relaxed mb-8">
+        Your messages are end-to-end encrypted. Only you and the recipient can read them.
       </p>
       <button
         onClick={onNew}
-        className="px-6 py-2.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold rounded-full transition-colors"
+        className="px-8 py-3 bg-gradient-to-r from-purple-500 to-cyan-500 hover:from-purple-600 hover:to-cyan-600 text-white font-semibold rounded-full transition-all shadow-lg hover:shadow-purple-500/50"
       >
         Start a conversation
       </button>
